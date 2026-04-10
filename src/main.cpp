@@ -2,11 +2,9 @@
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "laserMapping");
-  ros::NodeHandle nh;
-  image_transport::ImageTransport it(nh);
-  LIVMapper mapper(nh); 
-  mapper.initializeSubscribersAndPublishers(nh, it);
-  mapper.run();
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<LIVMapper>();
+  node->run();
+  rclcpp::shutdown();
   return 0;
 }
