@@ -14,9 +14,8 @@ laserMapping:
     extrin_calib.extrinsic_T: [-0.02663, 0.03447, 0.02174]
     extrin_calib.extrinsic_R: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
     # T^camera_lidar (device-specific, from driver calib.yaml Tcl_0)
-    # Replace with your device values after running odin driver
-    extrin_calib.Rcl: [-0.00745, -0.99997, -0.00018, -0.00938, 0.00025, -0.99996, 0.99993, -0.00745, -0.00938]
-    extrin_calib.Pcl: [0.03127, 0.01817, -0.00955]
+    extrin_calib.Rcl: [-0.01233, -0.99983, -0.01365, -0.00175, 0.01367, -0.99991, 0.99992, -0.01231, -0.00192]
+    extrin_calib.Pcl: [0.03942, 0.01575, -0.00744]
 
     # time_offset
     time_offset.imu_time_offset: 0.0

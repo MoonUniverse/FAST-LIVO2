@@ -17,16 +17,16 @@ laserMapping:
     scale: 0.5
 
     # cam_fx (= A11 from calib.yaml)
-    cam_fx: 737.3568377326869
+    cam_fx: 733.347088
 
     # cam_fy (= A22 from calib.yaml)
-    cam_fy: 737.2915871767854
+    cam_fy: 733.6527
 
     # cam_cx (= u0 from calib.yaml)
-    cam_cx: 794.371920804624
+    cam_cx: 768.670454
 
     # cam_cy (= v0 from calib.yaml)
-    cam_cy: 666.2588672902901
+    cam_cy: 624.177971
 
     # distortion = 0 (undistorted image)
     cam_d0: 0.0
