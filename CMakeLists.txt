@@ -176,7 +176,7 @@ install(TARGETS fastlivo_mapping
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY launch config
+install(DIRECTORY launch config rviz_cfg
   DESTINATION share/${PROJECT_NAME}
 )
 

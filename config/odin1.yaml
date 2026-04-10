@@ -1,20 +1,22 @@
-# ROS2 parameter file for FAST-LIVO2
-# Converted from ROS1 format
+# ROS2 parameter file for FAST-LIVO2 with Odin1 sensor
 laserMapping:
   ros__parameters:
-    # common
-    common.img_topic: "/alphasense/cam0/image_raw"
-    common.lid_topic: "/hesai/pandar"
-    common.imu_topic: "/alphasense/imu"
+    # common - subscribe to undistorted image for pinhole model
+    common.img_topic: "/odin1/image/undistorted"
+    common.lid_topic: "/odin1/cloud_raw"
+    common.imu_topic: "/odin1/imu"
     common.img_en: 1
     common.lidar_en: 1
     common.ros_driver_bug_fix: false
 
     # extrin_calib
-    extrin_calib.extrinsic_T: [-0.001, -0.00855, 0.055]
-    extrin_calib.extrinsic_R: [0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0]
-    extrin_calib.Rcl: [-0.999926, -0.00670802, 0.0101073, -0.0100912, -0.00242564, -0.999946, 0.00673218, -0.999975, 0.00235777]
-    extrin_calib.Pcl: [-0.0549762, 0.0675401, -0.0520599]
+    # T^imu_lidar (fixed for all Odin1 devices)
+    extrin_calib.extrinsic_T: [-0.02663, 0.03447, 0.02174]
+    extrin_calib.extrinsic_R: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+    # T^camera_lidar (device-specific, from driver calib.yaml Tcl_0)
+    # Replace with your device values after running odin driver
+    extrin_calib.Rcl: [-0.00745, -0.99997, -0.00018, -0.00938, 0.00025, -0.99996, 0.99993, -0.00745, -0.00938]
+    extrin_calib.Pcl: [0.03127, 0.01817, -0.00955]
 
     # time_offset
     time_offset.imu_time_offset: 0.0
@@ -22,17 +24,16 @@ laserMapping:
     time_offset.exposure_time_init: 0.0
 
     # preprocess
-    preprocess.hilti_en: true
     preprocess.point_filter_num: 1
     preprocess.filter_size_surf: 0.1
-    preprocess.lidar_type: 5
-    preprocess.scan_line: 32
-    preprocess.blind: 0.6
+    preprocess.lidar_type: 8  # ODIN1
+    preprocess.scan_line: 6
+    preprocess.blind: 0.8
 
     # vio
     vio.max_iterations: 5
-    vio.outlier_threshold: 500.0
-    vio.img_point_cov: 1000.0
+    vio.outlier_threshold: 1000.0
+    vio.img_point_cov: 100.0
     vio.patch_size: 8
     vio.patch_pyrimid_level: 4
     vio.normal_en: true
@@ -45,7 +46,7 @@ laserMapping:
     imu.imu_en: true
     imu.imu_int_frame: 30
     imu.acc_cov: 0.5
-    imu.gyr_cov: 0.01
+    imu.gyr_cov: 0.3
     imu.b_acc_cov: 0.0001
     imu.b_gyr_cov: 0.0001
 
@@ -53,10 +54,10 @@ laserMapping:
     lio.max_iterations: 5
     lio.dept_err: 0.02
     lio.beam_err: 0.05
-    lio.min_eigen_value: 0.0001
-    lio.voxel_size: 0.4
+    lio.min_eigen_value: 0.0025
+    lio.voxel_size: 0.5
     lio.max_layer: 2
-    lio.max_points_num: 100
+    lio.max_points_num: 50
     lio.layer_init_num: [5, 5, 5, 5, 5]
 
     # local_map
@@ -76,8 +77,8 @@ laserMapping:
     publish.blind_rgb_points: 0.0
 
     # evo
-    evo.seq_name: "exp09_cupola"
-    evo.pose_output_en: true
+    evo.seq_name: "odin1_run"
+    evo.pose_output_en: false
 
     # pcd_save
     pcd_save.pcd_save_en: false

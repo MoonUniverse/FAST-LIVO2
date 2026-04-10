@@ -1,26 +1,39 @@
-cam_model: Pinhole
-# HKisland  HKairport
-cam_width: 2448
-cam_height: 2048
-scale: 0.25
-cam_fx: 1444.431662789634           
-cam_fy: 1444.343536688358
-cam_cx: 1177.801079401826
-cam_cy: 1043.601026568268
-cam_d0: -0.05729528706141188
-cam_d1: 0.1210407244166642
-cam_d2: 0.001274128378760289
-cam_d3: 0.0004389741530109464
+# ROS2 parameter file for FAST-LIVO2
+# Converted from ROS1 format
+laserMapping:
+  ros__parameters:
+    # cam_model
+    cam_model: "Pinhole"
 
-# AMtown AMvalley
-# cam_width: 2448
-# cam_height: 2048
-# scale: 0.25
-# cam_fx: 1453.88
-# cam_fy: 1452.85
-# cam_cx: 1182.53
-# cam_cy: 1045.82 
-# cam_d0: -0.052
-# cam_d1: 0.1168
-# cam_d2: 0.0015
-# cam_d3: 0.00013
+    # cam_width
+    cam_width: 2448
+
+    # cam_height
+    cam_height: 2048
+
+    # scale
+    scale: 0.25
+
+    # cam_fx
+    cam_fx: 1444.431662789634
+
+    # cam_fy
+    cam_fy: 1444.343536688358
+
+    # cam_cx
+    cam_cx: 1177.801079401826
+
+    # cam_cy
+    cam_cy: 1043.601026568268
+
+    # cam_d0
+    cam_d0: -0.05729528706141188
+
+    # cam_d1
+    cam_d1: 0.1210407244166642
+
+    # cam_d2
+    cam_d2: 0.001274128378760289
+
+    # cam_d3
+    cam_d3: 0.0004389741530109464

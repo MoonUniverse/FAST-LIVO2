@@ -1,12 +1,39 @@
-cam_model: Pinhole
-cam_width: 752
-cam_height: 480
-scale: 1.0
-cam_fx: 4.250258563372763e+02
-cam_fy: 4.267976260903337e+02
-cam_cx: 3.860151866550880e+02
-cam_cy: 2.419130336743440e+02
-cam_d0: -0.288105327549552
-cam_d1: 0.074578284234601
-cam_d2: 7.784489598138802e-04
-cam_d3: -2.277853975035461e-04
+# ROS2 parameter file for FAST-LIVO2
+# Converted from ROS1 format
+laserMapping:
+  ros__parameters:
+    # cam_model
+    cam_model: "Pinhole"
+
+    # cam_width
+    cam_width: 752
+
+    # cam_height
+    cam_height: 480
+
+    # scale
+    scale: 1.0
+
+    # cam_fx
+    cam_fx: 425.0258563372763
+
+    # cam_fy
+    cam_fy: 426.7976260903337
+
+    # cam_cx
+    cam_cx: 386.015186655088
+
+    # cam_cy
+    cam_cy: 241.913033674344
+
+    # cam_d0
+    cam_d0: -0.288105327549552
+
+    # cam_d1
+    cam_d1: 0.074578284234601
+
+    # cam_d2
+    cam_d2: 0.0007784489598138802
+
+    # cam_d3
+    cam_d3: -0.0002277853975035461

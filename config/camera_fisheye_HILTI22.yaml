@@ -1,12 +1,39 @@
-cam_model: EquidistantCamera
-cam_width: 720
-cam_height: 540
-scale: 1.0
-cam_fx: 351.31400364193297
-cam_fy: 351.4911744656785
-cam_cx: 367.8522793375995
-cam_cy: 253.8402144980996
-k1: -0.03696737352869157
-k2: -0.008917880497032812
-k3: 0.008912969593422046
-k4: -0.0037685977496087313
+# ROS2 parameter file for FAST-LIVO2
+# Converted from ROS1 format
+laserMapping:
+  ros__parameters:
+    # cam_model
+    cam_model: "EquidistantCamera"
+
+    # cam_width
+    cam_width: 720
+
+    # cam_height
+    cam_height: 540
+
+    # scale
+    scale: 1.0
+
+    # cam_fx
+    cam_fx: 351.31400364193297
+
+    # cam_fy
+    cam_fy: 351.4911744656785
+
+    # cam_cx
+    cam_cx: 367.8522793375995
+
+    # cam_cy
+    cam_cy: 253.8402144980996
+
+    # k1
+    k1: -0.03696737352869157
+
+    # k2
+    k2: -0.008917880497032812
+
+    # k3
+    k3: 0.008912969593422046
+
+    # k4
+    k4: -0.0037685977496087313

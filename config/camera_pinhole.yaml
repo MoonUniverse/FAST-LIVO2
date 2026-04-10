@@ -1,12 +1,41 @@
-cam_model: Pinhole
-cam_width: 1280
-cam_height: 1024
-scale: 0.5
-cam_fx: 1293.56944
-cam_fy: 1293.3155
-cam_cx: 626.91359
-cam_cy: 522.799224
-cam_d0: -0.076160
-cam_d1: 0.123001
-cam_d2: -0.00113
-cam_d3: 0.000251
+# ROS2 parameter file for FAST-LIVO2
+# Odin1 de-distorted pinhole camera intrinsics
+# Device-specific: replace with values from your odin driver calib.yaml
+# fx=A11, fy=A22, cx=u0, cy=v0; distortion=0 (already de-distorted)
+laserMapping:
+  ros__parameters:
+    # cam_model
+    cam_model: "Pinhole"
+
+    # cam_width
+    cam_width: 1600
+
+    # cam_height
+    cam_height: 1296
+
+    # scale
+    scale: 0.5
+
+    # cam_fx (= A11 from calib.yaml)
+    cam_fx: 737.3568377326869
+
+    # cam_fy (= A22 from calib.yaml)
+    cam_fy: 737.2915871767854
+
+    # cam_cx (= u0 from calib.yaml)
+    cam_cx: 794.371920804624
+
+    # cam_cy (= v0 from calib.yaml)
+    cam_cy: 666.2588672902901
+
+    # distortion = 0 (undistorted image)
+    cam_d0: 0.0
+
+    # cam_d1
+    cam_d1: 0.0
+
+    # cam_d2
+    cam_d2: 0.0
+
+    # cam_d3
+    cam_d3: 0.0
