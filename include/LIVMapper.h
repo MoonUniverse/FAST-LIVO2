@@ -106,6 +106,8 @@ public:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pubImuPropOdom;
   double imu_time_offset = 0.0;
   double lidar_time_offset = 0.0;
+  int sensor_sub_qos_depth = 10;
+  bool sensor_sub_qos_reliable = false;
 
   bool gravity_align_en = false, gravity_align_finished = false;
 

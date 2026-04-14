@@ -146,6 +146,9 @@ laserMapping:
     common.img_topic: "/odin1/image/undistorted"
     common.lid_topic: "/odin1/cloud_raw"
     common.imu_topic: "/odin1/imu"
+    common.sensor_sub_qos_depth: 10
+    common.sensor_sub_qos_reliable: true
+    common.ros_driver_bug_fix: false
 
     # IMU→LiDAR 外参 (T^imu_lidar，所有 Odin1 固定值)
     extrin_calib.extrinsic_T: [-0.02663, 0.03447, 0.02174]
@@ -158,6 +161,11 @@ laserMapping:
     # LiDAR 类型
     preprocess.lidar_type: 8  # ODIN1
 ```
+
+这里有两个和当前 Odin1 驱动直接相关的点：
+
+1. `common.sensor_sub_qos_depth: 10` 与 `common.sensor_sub_qos_reliable: true` 用于匹配 Odin1 当前 ROS2 发布侧的 `RELIABLE + KEEP_LAST(10)`。
+2. `common.ros_driver_bug_fix` 需要保持为 `false`。当前 Odin1 的 IMU / undistorted image / cloud header stamp 已经在同一设备时间轴上对齐；如果这里继续开启兼容修正，FAST-LIVO2 会对 IMU 时间做整秒级补偿，进而触发 `imu loop back`。
 
 ### 4.3 Odin1 相机内参配置
 

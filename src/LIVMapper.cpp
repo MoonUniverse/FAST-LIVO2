@@ -62,6 +62,15 @@ void LIVMapper::readParameters()
   this->get_parameter("common.lidar_en", lidar_en);
   this->declare_parameter<string>("common.img_topic", "/left_camera/image");
   this->get_parameter("common.img_topic", img_topic);
+  this->declare_parameter<int>("common.sensor_sub_qos_depth", 10);
+  this->get_parameter("common.sensor_sub_qos_depth", sensor_sub_qos_depth);
+  this->declare_parameter<bool>("common.sensor_sub_qos_reliable", false);
+  this->get_parameter("common.sensor_sub_qos_reliable", sensor_sub_qos_reliable);
+
+  if (sensor_sub_qos_depth < 1) {
+    RCLCPP_WARN(this->get_logger(), "common.sensor_sub_qos_depth must be >= 1, falling back to 10");
+    sensor_sub_qos_depth = 10;
+  }
 
   this->declare_parameter<bool>("vio.normal_en", true);
   this->get_parameter("vio.normal_en", normal_en);
@@ -249,7 +258,12 @@ void LIVMapper::initializeFiles()
 
 void LIVMapper::initializeSubscribersAndPublishers() 
 {
-  auto qos = rclcpp::SensorDataQoS();
+  auto qos = rclcpp::QoS(rclcpp::KeepLast(static_cast<size_t>(sensor_sub_qos_depth)))
+               .durability(RMW_QOS_POLICY_DURABILITY_VOLATILE)
+               .reliability(
+                 sensor_sub_qos_reliable
+                   ? RMW_QOS_POLICY_RELIABILITY_RELIABLE
+                   : RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
   sub_pcl = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     lid_topic, qos, std::bind(&LIVMapper::standard_pcl_cbk, this, std::placeholders::_1));
   sub_imu = this->create_subscription<sensor_msgs::msg::Imu>(
@@ -799,9 +813,14 @@ void LIVMapper::imu_cbk(const sensor_msgs::msg::Imu::SharedPtr msg_in)
   msg->header.stamp = rclcpp::Time(static_cast<int64_t>((rclcpp::Time(msg->header.stamp).seconds() - imu_time_offset) * 1e9));
   double timestamp = rclcpp::Time(msg->header.stamp).seconds();
 
-  if (fabs(last_timestamp_lidar - timestamp) > 0.5 && (!ros_driver_fix_en))
+  const double lidar_minus_imu = last_timestamp_lidar - timestamp;
+  // Under the single-threaded spin_some() processing model, the latest handled
+  // LiDAR stamp can temporarily lag behind newly arrived IMU messages. That is a
+  // callback scheduling artifact rather than a real sensor time-base mismatch.
+  // Only warn when IMU time is significantly older than the latest LiDAR stamp.
+  if (lidar_minus_imu > 0.5 && (!ros_driver_fix_en))
   {
-    RCLCPP_WARN(this->get_logger(), "IMU and LiDAR not synced! delta time: %lf", last_timestamp_lidar - timestamp);
+    RCLCPP_WARN(this->get_logger(), "IMU older than LiDAR by %lf seconds", lidar_minus_imu);
   }
 
   if (ros_driver_fix_en) timestamp += std::round(last_timestamp_lidar - timestamp);

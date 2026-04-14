@@ -5,6 +5,8 @@ laserMapping:
     common.img_topic: "/odin1/image/undistorted"
     common.lid_topic: "/odin1/cloud_raw"
     common.imu_topic: "/odin1/imu"
+    common.sensor_sub_qos_depth: 10
+    common.sensor_sub_qos_reliable: true
     common.img_en: 1
     common.lidar_en: 1
     common.ros_driver_bug_fix: false
