@@ -12,6 +12,9 @@ which is included as part of this source code package.
 
 #include "LIVMapper.h"
 
+#include <ctime>
+#include <filesystem>
+
 LIVMapper::LIVMapper()
     : Node("laserMapping"),
       extT(0, 0, 0),
@@ -231,27 +234,37 @@ void LIVMapper::initializeComponents()
 
 void LIVMapper::initializeFiles() 
 {
-  if (pcd_save_en && colmap_output_en)
-  {
-      const std::string folderPath = std::string(ROOT_DIR) + "/scripts/colmap_output.sh";
-      
-      std::string chmodCommand = "chmod +x " + folderPath;
-      
-      int chmodRet = system(chmodCommand.c_str());  
-      if (chmodRet != 0) {
-          std::cerr << "Failed to set execute permissions for the script." << std::endl;
-          return;
-      }
+  const auto now = std::chrono::system_clock::now();
+  const std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+  std::tm local_tm{};
+  localtime_r(&now_c, &local_tm);
 
-      int executionRet = system(folderPath.c_str());
-      if (executionRet != 0) {
-          std::cerr << "Failed to execute the script." << std::endl;
-          return;
-      }
-  }
-  if(colmap_output_en) fout_points.open(std::string(ROOT_DIR) + "Log/Colmap/sparse/0/points3D.txt", std::ios::out);
-  if(pcd_save_en) fout_lidar_pos.open(std::string(ROOT_DIR) + "Log/pcd/lidar_poses.txt", std::ios::out);
-  if(img_save_en) fout_visual_pos.open(std::string(ROOT_DIR) + "Log/image/image_poses.txt", std::ios::out);
+  std::ostringstream run_id_stream;
+  run_id_stream << std::put_time(&local_tm, "%Y%m%d_%H%M%S");
+  save_run_id = run_id_stream.str();
+
+  save_root_dir = std::string(ROOT_DIR) + "Log/" + seq_name + "_" + save_run_id;
+  image_save_dir = save_root_dir + "/all_image";
+  pcd_save_dir = save_root_dir + "/all_pcd_body";
+  colmap_save_dir = save_root_dir + "/colmap";
+  depth_save_dir = save_root_dir + "/depth";
+  reproj_save_dir = save_root_dir + "/reproj";
+
+  std::filesystem::create_directories(save_root_dir);
+  std::filesystem::create_directories(image_save_dir);
+  std::filesystem::create_directories(pcd_save_dir);
+  std::filesystem::create_directories(colmap_save_dir + "/images");
+  std::filesystem::create_directories(colmap_save_dir + "/sparse/0");
+  std::filesystem::create_directories(depth_save_dir);
+  std::filesystem::create_directories(reproj_save_dir);
+
+  vio_manager->colmap_image_dir = colmap_save_dir + "/images";
+  vio_manager->colmap_sparse_dir = colmap_save_dir + "/sparse/0";
+  vio_manager->reproj_dir = reproj_save_dir;
+
+  if(colmap_output_en) fout_points.open(colmap_save_dir + "/sparse/0/points3D.txt", std::ios::out);
+  if(pcd_save_en) fout_lidar_pos.open(pcd_save_dir + "/lidar_poses.txt", std::ios::out);
+  if(img_save_en) fout_visual_pos.open(image_save_dir + "/image_poses.txt", std::ios::out);
   fout_pre.open(DEBUG_FILE_DIR("mat_pre.txt"), std::ios::out);
   fout_out.open(DEBUG_FILE_DIR("mat_out.txt"), std::ios::out);
 }
@@ -563,8 +576,8 @@ void LIVMapper::savePCD()
 {
   if (pcd_save_en && (pcl_wait_save->points.size() > 0 || pcl_wait_save_intensity->points.size() > 0) && pcd_save_interval < 0) 
   {
-    std::string raw_points_dir = std::string(ROOT_DIR) + "Log/pcd/all_raw_points.pcd";
-    std::string downsampled_points_dir = std::string(ROOT_DIR) + "Log/pcd/all_downsampled_points.pcd";
+    std::string raw_points_dir = pcd_save_dir + "/all_raw_points.pcd";
+    std::string downsampled_points_dir = pcd_save_dir + "/all_downsampled_points.pcd";
     pcl::PCDWriter pcd_writer;
 
     if (img_en)
@@ -1284,7 +1297,7 @@ void LIVMapper::publish_frame_world(VIOManagerPtr vio_manager)
     }
     if ((pcl_wait_save->size() > 0 || pcl_wait_save_intensity->size() > 0) && pcd_save_interval > 0 && scan_wait_num >= pcd_save_interval)
     {
-      string all_points_dir(string(string(ROOT_DIR) + "Log/pcd/") + ss_time.str() + string(".pcd"));
+      string all_points_dir(pcd_save_dir + "/" + ss_time.str() + ".pcd");
 
       pcl::PCDWriter pcd_writer;
 
@@ -1317,7 +1330,7 @@ void LIVMapper::publish_frame_world(VIOManagerPtr vio_manager)
 
     if (img_save_interval > 0 && img_wait_num >= img_save_interval)
     {
-      imwrite(string(string(ROOT_DIR) + "Log/image/") + ss_time.str() + string(".png"), vio_manager->img_rgb);
+      imwrite(image_save_dir + "/" + ss_time.str() + ".png", vio_manager->img_rgb);
       
       Eigen::Quaterniond q(_state.rot_end);
       fout_visual_pos << std::fixed << std::setprecision(6);

@@ -82,12 +82,12 @@ laserMapping:
     evo.pose_output_en: false
 
     # pcd_save
-    pcd_save.pcd_save_en: false
-    pcd_save.type: 0
+    pcd_save.pcd_save_en: true
+    pcd_save.type: 1
     pcd_save.colmap_output_en: false
     pcd_save.filter_size_pcd: 0.15
     pcd_save.interval: -1
 
     # image_save
-    image_save.img_save_en: false
+    image_save.img_save_en: true
     image_save.interval: 1

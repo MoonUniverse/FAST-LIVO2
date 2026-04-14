@@ -77,6 +77,13 @@ public:
   std::unordered_map<VOXEL_LOCATION, VoxelOctoTree *> voxel_map;
   
   string root_dir;
+  string save_root_dir;
+  string save_run_id;
+  string image_save_dir;
+  string pcd_save_dir;
+  string colmap_save_dir;
+  string depth_save_dir;
+  string reproj_save_dir;
   string lid_topic, imu_topic, seq_name, img_topic;
   V3D extT;
   M3D extR;

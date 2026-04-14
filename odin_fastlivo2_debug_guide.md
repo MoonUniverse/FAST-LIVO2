@@ -136,6 +136,53 @@ common.ros_driver_bug_fix: false
 - `common.ros_driver_bug_fix` 对当前 Odin ROS2 路径必须是 `false`。
 - 改完源码配置后一定要重新 `colcon build --packages-select fast_livo`，否则 launch 仍会读取旧的安装配置。
 
+### 4.3 FAST-LIVO2 图像 / PCD 保存行为
+
+当前相关参数：
+
+```yaml
+pcd_save.pcd_save_en: false
+pcd_save.type: 1
+pcd_save.colmap_output_en: false
+pcd_save.filter_size_pcd: 0.15
+pcd_save.interval: -1
+
+image_save.img_save_en: true
+image_save.interval: 1
+```
+
+当前实际行为：
+
+- `pcd_save.pcd_save_en: false`：**不会保存 PCD**
+- `image_save.img_save_en: true`：**启动后自动保存图像**
+- `image_save.interval: 1`：每个满足条件的 VIO 图像都保存
+
+现在已改成按**每次启动时间戳**建独立目录，目录结构为：
+
+```text
+/home/nuc11/fast_livo2/src/FAST-LIVO2/Log/<seq_name>_<YYYYMMDD_HHMMSS>/
+├── all_image/
+│   ├── <timestamp>.png
+│   └── image_poses.txt
+├── all_pcd_body/
+│   ├── <timestamp>.pcd
+│   └── lidar_poses.txt
+├── colmap/
+│   ├── images/
+│   └── sparse/0/
+│       ├── cameras.txt
+│       ├── images.txt
+│       └── points3D.txt
+├── depth/
+└── reproj/
+```
+
+说明：
+
+- 顶层目录名来自 `seq_name + 启动时间戳`
+- 即使多次启动也不会覆盖上一次结果
+- 当前 `pcd_save.pcd_save_en: false` 时，`all_pcd_body/` 会存在，但不会写入 PCD 文件
+
 ---
 
 ## 5. 最终频率结果
