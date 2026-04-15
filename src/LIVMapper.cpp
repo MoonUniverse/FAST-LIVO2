@@ -51,6 +51,86 @@ LIVMapper::LIVMapper()
 
 LIVMapper::~LIVMapper() {}
 
+void LIVMapper::recordInputEvent(InputStream stream, double stamp_sec)
+{
+  auto now = std::chrono::steady_clock::now();
+  bool should_log = false;
+  double lidar_wall_hz = 0.0;
+  double image_wall_hz = 0.0;
+  double imu_wall_hz = 0.0;
+  double lidar_stamp_hz = 0.0;
+  double image_stamp_hz = 0.0;
+  double imu_stamp_hz = 0.0;
+
+  {
+    std::lock_guard<std::mutex> lock(mtx_input_rate);
+    if (!input_rate_window.initialized)
+    {
+      input_rate_window.initialized = true;
+      input_rate_window.start_time = now;
+    }
+
+    auto update_stats = [stamp_sec](InputRateWindow::StreamStats &stats) {
+      ++stats.count;
+      if (!stats.stamp_initialized)
+      {
+        stats.stamp_initialized = true;
+        stats.first_stamp = stamp_sec;
+      }
+      stats.last_stamp = stamp_sec;
+    };
+
+    switch (stream)
+    {
+      case InputStream::Lidar:
+        update_stats(input_rate_window.lidar);
+        break;
+      case InputStream::Imu:
+        update_stats(input_rate_window.imu);
+        break;
+      case InputStream::Image:
+        update_stats(input_rate_window.image);
+        break;
+    }
+
+    const double elapsed = std::chrono::duration<double>(now - input_rate_window.start_time).count();
+    if (elapsed >= input_rate_log_period_sec)
+    {
+      auto calc_stamp_hz = [](const InputRateWindow::StreamStats &stats) {
+        if (stats.count < 2) return 0.0;
+        const double duration = stats.last_stamp - stats.first_stamp;
+        if (duration <= 0.0) return 0.0;
+        return static_cast<double>(stats.count - 1) / duration;
+      };
+
+      lidar_wall_hz = static_cast<double>(input_rate_window.lidar.count) / elapsed;
+      image_wall_hz = static_cast<double>(input_rate_window.image.count) / elapsed;
+      imu_wall_hz = static_cast<double>(input_rate_window.imu.count) / elapsed;
+      lidar_stamp_hz = calc_stamp_hz(input_rate_window.lidar);
+      image_stamp_hz = calc_stamp_hz(input_rate_window.image);
+      imu_stamp_hz = calc_stamp_hz(input_rate_window.imu);
+      input_rate_window.start_time = now;
+      input_rate_window.lidar = {};
+      input_rate_window.image = {};
+      input_rate_window.imu = {};
+      should_log = true;
+    }
+  }
+
+  if (should_log)
+  {
+    RCLCPP_INFO(
+      this->get_logger(),
+      "[ Input Rate ] lidar: cb %.2f / stamp %.2f Hz | image: cb %.2f / stamp %.2f Hz | imu: cb %.2f / stamp %.2f Hz",
+      lidar_wall_hz,
+      lidar_stamp_hz,
+      image_wall_hz,
+      image_stamp_hz,
+      imu_wall_hz,
+      imu_stamp_hz);
+  }
+}
+
 void LIVMapper::readParameters()
 {
   this->declare_parameter<string>("common.lid_topic", "/livox/lidar");
@@ -67,12 +147,31 @@ void LIVMapper::readParameters()
   this->get_parameter("common.img_topic", img_topic);
   this->declare_parameter<int>("common.sensor_sub_qos_depth", 10);
   this->get_parameter("common.sensor_sub_qos_depth", sensor_sub_qos_depth);
+  this->declare_parameter<int>("common.lidar_sub_qos_depth", sensor_sub_qos_depth);
+  this->get_parameter("common.lidar_sub_qos_depth", lidar_sub_qos_depth);
+  this->declare_parameter<int>("common.image_sub_qos_depth", sensor_sub_qos_depth);
+  this->get_parameter("common.image_sub_qos_depth", image_sub_qos_depth);
+  this->declare_parameter<int>("common.imu_sub_qos_depth", 512);
+  this->get_parameter("common.imu_sub_qos_depth", imu_sub_qos_depth);
   this->declare_parameter<bool>("common.sensor_sub_qos_reliable", false);
   this->get_parameter("common.sensor_sub_qos_reliable", sensor_sub_qos_reliable);
 
   if (sensor_sub_qos_depth < 1) {
     RCLCPP_WARN(this->get_logger(), "common.sensor_sub_qos_depth must be >= 1, falling back to 10");
     sensor_sub_qos_depth = 10;
+  }
+
+  if (lidar_sub_qos_depth < 1) {
+    RCLCPP_WARN(this->get_logger(), "common.lidar_sub_qos_depth must be >= 1, falling back to sensor_sub_qos_depth");
+    lidar_sub_qos_depth = sensor_sub_qos_depth;
+  }
+  if (image_sub_qos_depth < 1) {
+    RCLCPP_WARN(this->get_logger(), "common.image_sub_qos_depth must be >= 1, falling back to sensor_sub_qos_depth");
+    image_sub_qos_depth = sensor_sub_qos_depth;
+  }
+  if (imu_sub_qos_depth < 1) {
+    RCLCPP_WARN(this->get_logger(), "common.imu_sub_qos_depth must be >= 1, falling back to 512");
+    imu_sub_qos_depth = 512;
   }
 
   this->declare_parameter<bool>("vio.normal_en", true);
@@ -271,18 +370,23 @@ void LIVMapper::initializeFiles()
 
 void LIVMapper::initializeSubscribersAndPublishers() 
 {
-  auto qos = rclcpp::QoS(rclcpp::KeepLast(static_cast<size_t>(sensor_sub_qos_depth)))
-               .durability(RMW_QOS_POLICY_DURABILITY_VOLATILE)
-               .reliability(
-                 sensor_sub_qos_reliable
-                   ? RMW_QOS_POLICY_RELIABILITY_RELIABLE
-                   : RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
+  auto make_qos = [this](int depth) {
+    return rclcpp::QoS(rclcpp::KeepLast(static_cast<size_t>(depth)))
+      .durability(RMW_QOS_POLICY_DURABILITY_VOLATILE)
+      .reliability(
+        sensor_sub_qos_reliable
+          ? RMW_QOS_POLICY_RELIABILITY_RELIABLE
+          : RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
+  };
+  auto lidar_qos = make_qos(lidar_sub_qos_depth);
+  auto imu_qos = make_qos(imu_sub_qos_depth);
+  auto image_qos = make_qos(image_sub_qos_depth);
   sub_pcl = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    lid_topic, qos, std::bind(&LIVMapper::standard_pcl_cbk, this, std::placeholders::_1));
+    lid_topic, lidar_qos, std::bind(&LIVMapper::standard_pcl_cbk, this, std::placeholders::_1));
   sub_imu = this->create_subscription<sensor_msgs::msg::Imu>(
-    imu_topic, qos, std::bind(&LIVMapper::imu_cbk, this, std::placeholders::_1));
+    imu_topic, imu_qos, std::bind(&LIVMapper::imu_cbk, this, std::placeholders::_1));
   sub_img = this->create_subscription<sensor_msgs::msg::Image>(
-    img_topic, qos, std::bind(&LIVMapper::img_cbk, this, std::placeholders::_1));
+    img_topic, image_qos, std::bind(&LIVMapper::img_cbk, this, std::placeholders::_1));
 
   pubLaserCloudFullRes = this->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered", 100);
   pubNormal = this->create_publisher<visualization_msgs::msg::MarkerArray>("visualization_marker", 100);
@@ -376,11 +480,8 @@ void LIVMapper::handleVIO()
     
   if (pcl_w_wait_pub->empty() || (pcl_w_wait_pub == nullptr)) 
   {
-    std::cout << "[ VIO ] No point!!!" << std::endl;
     return;
   }
-    
-  std::cout << "[ VIO ] Raw feature num: " << pcl_w_wait_pub->points.size() << std::endl;
 
   if (fabs((LidarMeasures.last_lio_update_time - _first_lidar_time) - plot_time) < (frame_cnt / 2 * 0.1)) 
   {
@@ -431,7 +532,6 @@ void LIVMapper::handleLIO()
            
   if (feats_undistort->empty() || (feats_undistort == nullptr)) 
   {
-    std::cout << "[ LIO ]: No point!!!" << std::endl;
     return;
   }
 
@@ -513,7 +613,6 @@ void LIVMapper::handleLIO()
     voxelmap_manager->pv_list_[i].var = var;
   }
   voxelmap_manager->UpdateVoxelMap(voxelmap_manager->pv_list_);
-  std::cout << "[ LIO ] Update Voxel Map" << std::endl;
   _pv_list = voxelmap_manager->pv_list_;
   
   double t4 = omp_get_wtime();
@@ -553,19 +652,6 @@ void LIVMapper::handleLIO()
   // printf("\033[1;36m[ LIO mapping time ]: current scan: icp: %0.6f secs, map incre: %0.6f secs, total: %0.6f secs.\033[0m\n"
   //         "\033[1;36m[ LIO mapping time ]: average: icp: %0.6f secs, map incre: %0.6f secs, total: %0.6f secs.\033[0m\n",
   //         t2 - t1, t4 - t3, t4 - t0, aver_time_icp, aver_time_map_inre, aver_time_consu);
-  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
-  printf("\033[1;34m|                         LIO Mapping Time                    |\033[0m\n");
-  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
-  printf("\033[1;34m| %-29s | %-27s |\033[0m\n", "Algorithm Stage", "Time (secs)");
-  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
-  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "DownSample", t_down - t0);
-  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "ICP", t2 - t1);
-  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "updateVoxelMap", t4 - t3);
-  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
-  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Current Total Time", t4 - t0);
-  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Average Total Time", aver_time_consu);
-  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
-
   euler_cur = RotMtoEuler(_state.rot_end);
   fout_out << std::setw(20) << LidarMeasures.last_lio_update_time - _first_lidar_time << " " << euler_cur.transpose() * 57.3 << " "
             << _state.pos_end.transpose() << " " << _state.vel_end.transpose() << " " << _state.bias_g.transpose() << " "
@@ -812,6 +898,7 @@ void LIVMapper::standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::SharedPtr 
   last_timestamp_lidar = cur_head_time;
 
   mtx_buffer.unlock();
+  recordInputEvent(InputStream::Lidar, cur_head_time);
   sig_buffer.notify_all();
 }
 
@@ -863,6 +950,7 @@ void LIVMapper::imu_cbk(const sensor_msgs::msg::Imu::SharedPtr msg_in)
   imu_buffer.push_back(msg);
   // cout<<"got imu: "<<timestamp<<" imu size "<<imu_buffer.size()<<endl;
   mtx_buffer.unlock();
+  recordInputEvent(InputStream::Imu, timestamp);
   if (imu_prop_enable)
   {
     mtx_buffer_imu_prop.lock();
@@ -901,7 +989,6 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::SharedPtr msg_in)
   // double msg_header_time =  rclcpp::Time(msg->header.stamp).seconds();
   double msg_header_time = rclcpp::Time(msg->header.stamp).seconds() + img_time_offset;
   if (abs(msg_header_time - last_timestamp_img) < 0.001) return;
-  RCLCPP_INFO(this->get_logger(), "Get image, its header time: %.6f", msg_header_time);
   if (last_timestamp_lidar < 0) return;
 
   if (msg_header_time < last_timestamp_img)
@@ -933,6 +1020,7 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::SharedPtr msg_in)
   // cv::waitKey(1);
   // cout<<"last_timestamp_img:::"<<last_timestamp_img<<endl;
   mtx_buffer.unlock();
+  recordInputEvent(InputStream::Image, img_time_correct);
   sig_buffer.notify_all();
 }
 
@@ -1284,7 +1372,6 @@ void LIVMapper::publish_frame_world(VIOManagerPtr vio_manager)
           }
           *pcl_wait_save_intensity += *laserCloudBody;
           scan_wait_num++;
-          cout << "save body frame points: " << pcl_wait_save_intensity->points.size() << endl;
         }
         pcd_save_interval = 1;
         
@@ -1301,7 +1388,6 @@ void LIVMapper::publish_frame_world(VIOManagerPtr vio_manager)
 
       pcl::PCDWriter pcd_writer;
 
-      cout << "current scan saved to " << all_points_dir << endl;
       if (pcl_wait_save->points.size() > 0)
       {
         pcd_writer.writeBinary(all_points_dir, *pcl_wait_save); // pcl::io::savePCDFileASCII(all_points_dir, *pcl_wait_save);

@@ -6,6 +6,9 @@ laserMapping:
     common.lid_topic: "/odin1/cloud_raw"
     common.imu_topic: "/odin1/imu"
     common.sensor_sub_qos_depth: 10
+    common.lidar_sub_qos_depth: 50
+    common.image_sub_qos_depth: 50
+    common.imu_sub_qos_depth: 1024
     common.sensor_sub_qos_reliable: true
     common.img_en: 1
     common.lidar_en: 1
@@ -86,8 +89,8 @@ laserMapping:
     pcd_save.type: 1
     pcd_save.colmap_output_en: false
     pcd_save.filter_size_pcd: 0.15
-    pcd_save.interval: -1
+    pcd_save.interval: 2
 
     # image_save
     image_save.img_save_en: true
-    image_save.interval: 1
+    image_save.interval: 2

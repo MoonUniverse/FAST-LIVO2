@@ -16,6 +16,7 @@ which is included as part of this source code package.
 #include "IMU_Processing.h"
 #include "vio.h"
 #include "preprocess.h"
+#include <chrono>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -33,6 +34,29 @@ which is included as part of this source code package.
 class LIVMapper : public rclcpp::Node
 {
 public:
+  enum class InputStream
+  {
+    Lidar,
+    Imu,
+    Image
+  };
+
+  struct InputRateWindow
+  {
+    bool initialized = false;
+    std::chrono::steady_clock::time_point start_time;
+    struct StreamStats
+    {
+      size_t count = 0;
+      bool stamp_initialized = false;
+      double first_stamp = 0.0;
+      double last_stamp = 0.0;
+    };
+    StreamStats lidar;
+    StreamStats imu;
+    StreamStats image;
+  };
+
   LIVMapper();
   ~LIVMapper();
   void initializeSubscribersAndPublishers();
@@ -65,6 +89,7 @@ public:
   void publish_mavros();
   void publish_path();
   void readParameters();
+  void recordInputEvent(InputStream stream, double stamp_sec);
   template <typename T> void set_posestamp(T &out);
   template <typename T> void pointBodyToWorld(const Eigen::Matrix<T, 3, 1> &pi, Eigen::Matrix<T, 3, 1> &po);
   template <typename T> Eigen::Matrix<T, 3, 1> pointBodyToWorld(const Eigen::Matrix<T, 3, 1> &pi);
@@ -114,7 +139,13 @@ public:
   double imu_time_offset = 0.0;
   double lidar_time_offset = 0.0;
   int sensor_sub_qos_depth = 10;
+  int lidar_sub_qos_depth = 10;
+  int image_sub_qos_depth = 10;
+  int imu_sub_qos_depth = 512;
   bool sensor_sub_qos_reliable = false;
+  double input_rate_log_period_sec = 5.0;
+  std::mutex mtx_input_rate;
+  InputRateWindow input_rate_window;
 
   bool gravity_align_en = false, gravity_align_finished = false;
 

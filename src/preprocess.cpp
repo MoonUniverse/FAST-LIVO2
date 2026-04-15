@@ -674,7 +674,6 @@ void Preprocess::odin1_handler(const sensor_msgs::msg::PointCloud2::SharedPtr ms
       }
     }
   }
-  printf("[ Preprocess ] Odin1 Output point number: %zu \n", pl_surf.points.size());
 }
 
 void Preprocess::give_feature(pcl::PointCloud<PointType> &pl, vector<orgtype> &types)

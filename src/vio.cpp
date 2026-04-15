@@ -778,7 +778,6 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
   // cout<<"C. addSubSparseMap: "<<t3-t2<<endl;
   // cout<<"depthcontinuous: C1 "<<t_2<<" C2 "<<t_3<<" C3 "<<t_4<<" C4
   // "<<t_5<<endl;
-  printf("[ VIO ] Retrieve %d points from visual sparse map\n", total_points);
 }
 
 void VIOManager::computeJacobianAndUpdateEKF(cv::Mat img)
@@ -899,7 +898,6 @@ void VIOManager::generateVisualMapPoints(cv::Mat img, vector<pointWithVar> &pg)
 
   // double t_b2 = omp_get_wtime() - t0;
 
-  printf("[ VIO ] Append %d new visual map points\n", add);
   // printf("pg.size: %d \n", pg.size());
   // printf("B1. : %.6lf \n", t_b1);
   // printf("B2. : %.6lf \n", t_b2);
@@ -963,7 +961,6 @@ void VIOManager::updateVisualMapPoints(cv::Mat img)
       pt->addFrameRef(ftr_new);
     }
   }
-  printf("[ VIO ] Update %d points in visual submap\n", update_num);
 }
 
 void VIOManager::updateReferencePatch(const unordered_map<VOXEL_LOCATION, VoxelOctoTree *> &plane_map)
